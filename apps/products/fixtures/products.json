@@ -1,0 +1,11 @@
+[
+  {
+    "model": "products.category",
+    "pk": 1,
+    "fields": {
+      "name": "Qorii",
+      "description": "Qorii is wooden container that used for food storage and serving:.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757544835/qori_poll60.png"
+    }
+  }
+]
