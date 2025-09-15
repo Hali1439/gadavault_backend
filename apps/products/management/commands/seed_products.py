@@ -1,46 +1,203 @@
 from django.core.management.base import BaseCommand
 from apps.products.models import Product
 
-# A list of product data to be seeded.
+# Products are in the fixture-style format (with fields nested)
 PRODUCTS_TO_SEED = [
-    {
-        "name": "Fascia Massage Gun",
-        "description": "Powerful muscle relief with multiple attachments.",
-        "price": 129.99,
-        "image_url": "https://example.com/images/massage-gun.jpg",
-        "category": "Health & Wellness",
-    },
-    {
-        "name": "Smart Water Bottle",
-        "description": "Tracks your hydration and glows to remind you to drink.",
-        "price": 45.00,
-        "image_url": "https://example.com/images/smart-bottle.jpg",
-        "category": "Gadgets",
-    },
-    {
-        "name": "Ergonomic Office Chair",
-        "description": "Designed for maximum comfort and support during long work hours.",
-        "price": 249.50,
-        "image_url": "https://example.com/images/ergonomic-chair.jpg",
-        "category": "Home & Office",
-    },
-    # ...add more product data as needed
+  {
+    "model": "products.product",
+    "pk": 1,
+    "fields": {
+      "name": "Qorii",
+      "price": "180.00",
+      "description": "Qorii is a wooden container used for food storage and serving.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757544835/qori_poll60.png",
+      "category": "Home & Kitchen"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 2,
+    "fields": {
+      "name": "Madiba Shirt",
+      "price": "450.00",
+      "description": "A distinctive, patterned shirt made popular by Nelson Mandela.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757630241/Madiba_Shirt_xph6qn.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 3,
+    "fields": {
+      "name": "Ndebele Beaded Aprons",
+      "price": "60.00",
+      "description": "A vibrant apron with beadwork, part of Ndebele cultural attire.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757630565/Ndebele_Beaded_Aprons_2_vhqm0k.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 4,
+    "fields": {
+      "name": "Zulu Shield and Spear",
+      "price": "175.00",
+      "description": "A traditional Zulu shield and spear set, symbolizing strength and heritage.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757897228/Zulu_shield_and_spear_kdoufo.jpg",
+      "category": "Cultural Artifacts"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 5,
+    "fields": {
+      "name": "African Drum",
+      "price": "320.00",
+      "description": "A handcrafted African drum, perfect for music enthusiasts and cultural celebrations.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757897514/African_drum_2_djnucc.jpg",
+      "category": "Musical Instruments"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 6,
+    "fields": {
+      "name": "Kente Cloth",
+      "price": "270.00",
+      "description": "A vibrant, multicolored hand-loomed fabric with symbolic meanings, worn by the Ashanti and Ewe.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757897007/Kente_Cloth_Ghana_jegsjn.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 7,
+    "fields": {
+      "name": "Shuka (Kenya/Tanzania)",
+      "price": "260.00",
+      "description": "A brightly colored, checkered cloth worn by the Maasai. Often red, it is wrapped around the body.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757897131/Shuka_KenyaTanzania_eswsgd.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 8,
+    "fields": {
+      "name": "Kanzu (Uganda/Tanzania)",
+      "price": "255.00",
+      "description": "A white or cream-colored robe worn by men, especially among Swahili-speaking people.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757897007/Kente_Cloth_Ghana_jegsjn.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 9,
+    "fields": {
+      "name": "Habesha Kemis (Ethiopia)",
+      "price": "300.00",
+      "description": "A hand-woven cotton dress with intricate embroidery, worn by Habesha women.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896771/Habesha_Kemis_Ethiopia_yi9q0h.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 10,
+    "fields": {
+      "name": "Gomesi (Uganda)",
+      "price": "280.00",
+      "description": "A brightly colored floor-length dress with pointed shoulders, worn by women in Uganda.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896753/Gomesi_Uganda_zmrj6b.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 11,
+    "fields": {
+      "name": "Agbada (Nigeria)",
+      "price": "350.00",
+      "description": "A large, four-piece flowing robe worn by men, particularly the Yoruba, for special occasions.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896538/Agbada_Nigeria_bgrmhb.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 12,
+    "fields": {
+      "name": "Dashiki (West Africa)",
+      "price": "220.00",
+      "description": "A colorful, V-shaped embroidered tunic worn by both men and women.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896623/Dashiki_West_Africa__2_yu4kbm.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 13,
+    "fields": {
+      "name": "Boubou (Senegal/Mali)",
+      "price": "230.00",
+      "description": "A large, flowing robe worn by both men and women across West Africa.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896592/Boubou_SenegalMali__2_ckdphc.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 14,
+    "fields": {
+      "name": "Bògòlanfini (Mali)",
+      "price": "240.00",
+      "description": "Also known as mudcloth, this hand-woven cotton cloth is dyed with fermented mud to create symbolic designs.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896548/B%C3%B2g%C3%B2lanfini_Mali_tfocqk.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 15,
+    "fields": {
+      "name": "Liputa (DRC)",
+      "price": "260.00",
+      "description": "A vibrant four-piece ensemble of matching fabric worn by Congolese women.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757897077/Liputa_DRC_tbj1un.jpg",
+      "category": "Clothing"
+    }
+  },
+  {
+    "model": "products.product",
+    "pk": 16,
+    "fields": {
+      "name": "Djellaba (Morocco)",
+      "price": "350.00",
+      "description": "A long, loose-fitting robe with a hood, worn by both men and women in Morocco.",
+      "image_url": "https://res.cloudinary.com/dxmxjdval/image/upload/v1757896665/Djellaba_Morocco_fvpfz1.jpg",
+      "category": "Clothing"
+    }
+  }
 ]
 
+
+
 class Command(BaseCommand):
-    help = "Seeds initial product data into the database. Updates existing products based on a unique name."
+    help = "Seeds authentic African product data into the database. Updates existing products based on unique name."
 
     def handle(self, *args, **options):
         self.stdout.write("Starting product seeding process...")
 
         for item in PRODUCTS_TO_SEED:
-            # Use update_or_create to prevent duplicates and update if product exists.
+            fields = item["fields"]  # ✅ pull from fields
+
             product, created = Product.objects.update_or_create(
-                name=item["name"],  # Name is used as the unique key to check for existence
-                defaults=item
+                name=fields["name"],  # Unique key
+                defaults=fields       # ✅ just the fields, not pk/model
             )
-            
+
             status = "Created" if created else "Updated"
             self.stdout.write(self.style.SUCCESS(f"{status}: {product.name}"))
 
-        self.stdout.write("Product seeding completed successfully.")
+        self.stdout.write(self.style.SUCCESS("✅ Product seeding completed successfully."))
