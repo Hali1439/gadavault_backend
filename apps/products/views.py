@@ -1,4 +1,10 @@
-from django.http import JsonResponse
+from rest_framework import viewsets
+from .models import Product
+from .serializers import ProductSerializer
 
-def ping(request):
-    return JsonResponse({"message": "Products app is alive!"})
+class ProductViewSet(viewsets.ModelViewSet):
+    """
+    Full CRUD API for Products
+    """
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer

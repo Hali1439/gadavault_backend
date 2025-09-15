@@ -1,4 +1,12 @@
-from django.http import JsonResponse
+from rest_framework import viewsets
+from django.contrib.auth import get_user_model
+from .serializers import UserSerializer
 
-def ping(request):
-    return JsonResponse({"message": "Users app is alive!"})
+User = get_user_model()
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    Full CRUD API for Users
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
