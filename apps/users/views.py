@@ -2,13 +2,17 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
 
 User = get_user_model()
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 
 # --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
