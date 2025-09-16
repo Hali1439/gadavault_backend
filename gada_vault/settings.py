@@ -4,12 +4,21 @@ from datetime import timedelta
 from decouple import config
 import cloudinary
 
+# -----------------------------
+# BASE DIRECTORY
+# -----------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# -----------------------------
+# SECURITY
+# -----------------------------
 SECRET_KEY = config("SECRET_KEY", default="dev-secret")
 DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*"]  # TODO: restrict in production (e.g. ["api.gadavault.com"])
 
+# -----------------------------
+# INSTALLED APPS
+# -----------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -25,6 +34,9 @@ INSTALLED_APPS = [
     "apps.products",
 ]
 
+# -----------------------------
+# MIDDLEWARE
+# -----------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -35,6 +47,9 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# -----------------------------
+# URLS & WSGI
+# -----------------------------
 ROOT_URLCONF = "gada_vault.urls"
 
 TEMPLATES = [
@@ -55,6 +70,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "gada_vault.wsgi.application"
 
+# -----------------------------
+# DATABASE
+# -----------------------------
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -66,8 +84,14 @@ DATABASES = {
     }
 }
 
+# -----------------------------
+# CUSTOM USER MODEL
+# -----------------------------
 AUTH_USER_MODEL = "users.User"
 
+# -----------------------------
+# REST FRAMEWORK
+# -----------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -82,14 +106,34 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+# -----------------------------
+# CLOUDINARY CONFIG
+# -----------------------------
 cloudinary.config(
     cloud_name=config("CLOUDINARY_CLOUD_NAME", default=""),
     api_key=config("CLOUDINARY_API_KEY", default=""),
     api_secret=config("CLOUDINARY_API_SECRET", default="")
 )
 
+# -----------------------------
+# STATIC & MEDIA FILES
+# -----------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# -----------------------------
+# EMAIL SETTINGS
+# -----------------------------
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk1307@gmail.com")
+
+# Optional: contact form receiver (fallback to sender if not set)
+CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
