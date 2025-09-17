@@ -3,6 +3,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 import cloudinary
+from celery import Celery
 
 # -----------------------------
 # BASE DIRECTORY
@@ -137,3 +138,28 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk130
 
 # Optional: contact form receiver (fallback to sender if not set)
 CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
+
+# -----------------------------
+# CELERY CONFIGURATION
+# -----------------------------
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gada_vault.settings")
+
+celery_app = Celery("gada_vault")
+celery_app.config_from_object("django.conf:settings", namespace="CELERY")
+celery_app.autodiscover_tasks()
+
+# Celery / Redis setup (with fallback if Redis not available)
+REDIS_URL = config("REDIS_URL", default="").strip()
+
+if REDIS_URL:
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
+else:
+    # Fallback for local/dev if Redis is missing
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache+memory://"
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"

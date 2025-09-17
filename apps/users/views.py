@@ -7,12 +7,16 @@ from rest_framework.response import Response
 
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
+from .tasks import send_contact_email  # <-- Celery async task
 
 User = get_user_model()
 
+
+# --- USER MANAGEMENT ---
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+
 
 # --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
@@ -22,7 +26,7 @@ class ContactCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         contact = serializer.save()
 
-        # Prepare email
+        # Prepare email details
         subject = f"New contact form from {contact.name}"
         body = (
             f"New contact received\n\n"
@@ -33,18 +37,28 @@ class ContactCreateView(generics.CreateAPIView):
         )
         recipient = getattr(settings, "CONTACT_RECEIVER_EMAIL", settings.EMAIL_HOST_USER)
 
-        # Send email synchronously (simple version)
+        # Send asynchronously with Celery
         try:
-            send_mail(
-                subject,
-                body,
-                settings.DEFAULT_FROM_EMAIL,
-                [recipient],
-                fail_silently=False,
+            send_contact_email.delay(
+                contact.id,
+                contact.name,
+                contact.email,
+                contact.message,
+                str(contact.created_at),
             )
         except Exception as e:
-            # Contact saved even if email fails
-            print("⚠️ Failed to send contact email:", e)
+            # Fallback: send synchronously if Celery not running
+            print("⚠️ Celery task failed, falling back to sync email:", e)
+            try:
+                send_mail(
+                    subject,
+                    body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [recipient],
+                    fail_silently=False,
+                )
+            except Exception as inner_e:
+                print("⚠️ Failed to send contact email:", inner_e)
 
 
 # --- SIGNUP ENDPOINT ---
