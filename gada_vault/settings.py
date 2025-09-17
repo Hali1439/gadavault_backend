@@ -16,7 +16,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------
 SECRET_KEY = config("SECRET_KEY", default="dev-secret")
 DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = ["*"]  # ⚠️ Restrict in production (e.g. ["api.gadavault.com"])
+
+# ALLOWED_HOSTS handling
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
+if not DEBUG:
+    raw_hosts = config("ALLOWED_HOSTS", default="gadavault-backend.up.railway.app").strip()
+    if raw_hosts:
+        ALLOWED_HOSTS += [h.strip() for h in raw_hosts.split(",")]
 
 # -----------------------------
 # INSTALLED APPS
