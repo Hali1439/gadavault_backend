@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import timedelta
-from decouple import config
+from decouple import RepositoryEnv
 import cloudinary
 from celery import Celery
 import dj_database_url
@@ -12,15 +12,23 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -----------------------------
+# ENV HANDLING (The Fix)
+# -----------------------------
+# Explicitly tell decouple where to find your .env file
+# This prevents it from failing to load due to environment-specific issues.
+ENV_PATH = BASE_DIR / ".env"
+config = RepositoryEnv(str(ENV_PATH))
+
+# -----------------------------
 # SECURITY
 # -----------------------------
-SECRET_KEY = config("SECRET_KEY", default="dev-secret")
-DEBUG = config("DEBUG", default=True, cast=bool)
+SECRET_KEY = config.get("SECRET_KEY", default="dev-secret")
+DEBUG = config.get("DEBUG", default="True", cast=bool)
 
 # ALLOWED_HOSTS handling
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
 if not DEBUG:
-    raw_hosts = config("ALLOWED_HOSTS", default="gadavault-backend.up.railway.app").strip()
+    raw_hosts = config.get("ALLOWED_HOSTS", default="gadavault-backend.up.railway.app").strip()
     if raw_hosts:
         ALLOWED_HOSTS += [h.strip() for h in raw_hosts.split(",")]
 
@@ -84,7 +92,7 @@ WSGI_APPLICATION = "gada_vault.wsgi.application"
 # Prefer DATABASE_URL if present (Railway provides this automatically)
 DATABASES = {
     "default": dj_database_url.config(
-        default=f"postgres://{config('POSTGRES_USER','gada_user')}:{config('POSTGRES_PASSWORD','gada_pass')}@{config('POSTGRES_HOST','localhost')}:{config('POSTGRES_PORT','5432')}/{config('POSTGRES_DB','gada_db')}",
+        default=f"postgres://{config.get('POSTGRES_USER','gada_user')}:{config.get('POSTGRES_PASSWORD','gada_pass')}@{config.get('POSTGRES_HOST','localhost')}:{config.get('POSTGRES_PORT','5432')}/{config.get('POSTGRES_DB','gada_db')}",
         conn_max_age=600,
         ssl_require=False
     )
@@ -112,13 +120,14 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
+
 # -----------------------------
 # CLOUDINARY CONFIG
 # -----------------------------
 cloudinary.config(
-    cloud_name=config("CLOUDINARY_CLOUD_NAME", default=""),
-    api_key=config("CLOUDINARY_API_KEY", default=""),
-    api_secret=config("CLOUDINARY_API_SECRET", default="")
+    cloud_name=config.get("CLOUDINARY_CLOUD_NAME", default=""),
+    api_key=config.get("CLOUDINARY_API_KEY", default=""),
+    api_secret=config.get("CLOUDINARY_API_SECRET", default="")
 )
 
 # -----------------------------
@@ -134,14 +143,14 @@ MEDIA_ROOT = BASE_DIR / "media"
 # EMAIL SETTINGS
 # -----------------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk1307@gmail.com")
+EMAIL_HOST = config.get("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config.get("EMAIL_PORT", default="587", cast=int)
+EMAIL_HOST_USER = config.get("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config.get("EMAIL_USE_TLS", default="True", cast=bool)
+DEFAULT_FROM_EMAIL = config.get("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk1307@gmail.com")
 
-CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
+CONTACT_RECEIVER_EMAIL = config.get("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
 
 # -----------------------------
 # CELERY CONFIGURATION
@@ -153,7 +162,7 @@ celery_app.config_from_object("django.conf:settings", namespace="CELERY")
 celery_app.autodiscover_tasks()
 
 # Celery / Redis setup
-REDIS_URL = config("REDIS_URL", default="").strip()
+REDIS_URL = config.get("REDIS_URL", default="").strip()
 
 if REDIS_URL:
     CELERY_BROKER_URL = REDIS_URL
