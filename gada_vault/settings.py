@@ -4,6 +4,7 @@ from datetime import timedelta
 from decouple import config
 import cloudinary
 from celery import Celery
+import dj_database_url
 
 # -----------------------------
 # BASE DIRECTORY
@@ -15,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------
 SECRET_KEY = config("SECRET_KEY", default="dev-secret")
 DEBUG = config("DEBUG", default=True, cast=bool)
-ALLOWED_HOSTS = ["*"]  # TODO: restrict in production (e.g. ["api.gadavault.com"])
+ALLOWED_HOSTS = ["*"]  # ⚠️ Restrict in production (e.g. ["api.gadavault.com"])
 
 # -----------------------------
 # INSTALLED APPS
@@ -74,15 +75,13 @@ WSGI_APPLICATION = "gada_vault.wsgi.application"
 # -----------------------------
 # DATABASE
 # -----------------------------
+# Prefer DATABASE_URL if present (Railway provides this automatically)
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("POSTGRES_DB", default="gada_db"),
-        "USER": config("POSTGRES_USER", default="gada_user"),
-        "PASSWORD": config("POSTGRES_PASSWORD", default="gada_pass"),
-        "HOST": config("POSTGRES_HOST", default="localhost"),
-        "PORT": config("POSTGRES_PORT", default="5432"),
-    }
+    "default": dj_database_url.config(
+        default=f"postgres://{config('POSTGRES_USER','gada_user')}:{config('POSTGRES_PASSWORD','gada_pass')}@{config('POSTGRES_HOST','localhost')}:{config('POSTGRES_PORT','5432')}/{config('POSTGRES_DB','gada_db')}",
+        conn_max_age=600,
+        ssl_require=False
+    )
 }
 
 # -----------------------------
@@ -136,7 +135,6 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk1307@gmail.com")
 
-# Optional: contact form receiver (fallback to sender if not set)
 CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
 
 # -----------------------------
@@ -148,14 +146,14 @@ celery_app = Celery("gada_vault")
 celery_app.config_from_object("django.conf:settings", namespace="CELERY")
 celery_app.autodiscover_tasks()
 
-# Celery / Redis setup (with fallback if Redis not available)
+# Celery / Redis setup
 REDIS_URL = config("REDIS_URL", default="").strip()
 
 if REDIS_URL:
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL
 else:
-    # Fallback for local/dev if Redis is missing
+    # Fallback for local/dev if Redis is not running
     CELERY_BROKER_URL = "memory://"
     CELERY_RESULT_BACKEND = "cache+memory://"
 
