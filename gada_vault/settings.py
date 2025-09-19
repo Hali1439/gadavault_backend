@@ -95,10 +95,10 @@ if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=CONN_MAX_AGE,
-            conn_health_checks=True,
+            conn_max_age=CONN_MAX_AGE
         )
     }
+
 else:
     DATABASES = {
         "default": {
