@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
 
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
@@ -16,12 +17,26 @@ User = get_user_model()
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    
+    # Define permissions based on action
+    def get_permissions(self):
+        """
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action == 'create':
+            # Allow new users to be created without authentication
+            permission_classes = [AllowAny]
+        else:
+            # All other actions (list, retrieve, update, destroy) require authentication
+            permission_classes = [IsAuthenticated]
+        return [permission() for permission in permission_classes]
 
 
 # --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
+    permission_classes = [AllowAny] # This endpoint is always public
 
     def perform_create(self, serializer):
         contact = serializer.save()
@@ -65,6 +80,7 @@ class ContactCreateView(generics.CreateAPIView):
 class SignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [AllowAny] # This endpoint is always public
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()

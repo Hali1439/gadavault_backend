@@ -1,10 +1,15 @@
+"""
+Django settings for gada_vault project.
+Adapted for Railway deployment + local dev.
+"""
+
 import os
 from pathlib import Path
 from datetime import timedelta
-from decouple import RepositoryEnv
 import cloudinary
-from celery import Celery
 import dj_database_url
+from celery import Celery
+from decouple import config  # handles .env automatically
 
 # -----------------------------
 # BASE DIRECTORY
@@ -12,49 +17,46 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # -----------------------------
-# ENV HANDLING (The Fix)
-# -----------------------------
-# Explicitly tell decouple where to find your .env file
-# This prevents it from failing to load due to environment-specific issues.
-ENV_PATH = BASE_DIR / ".env"
-config = RepositoryEnv(str(ENV_PATH))
-
-# -----------------------------
 # SECURITY
 # -----------------------------
-SECRET_KEY = config.get("SECRET_KEY", default="dev-secret")
-DEBUG = config.get("DEBUG", default="True", cast=bool)
+SECRET_KEY = config("DJANGO_SECRET_KEY", default="unsafe-dev-key")
 
-# ALLOWED_HOSTS handling
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
-if not DEBUG:
-    raw_hosts = config.get("ALLOWED_HOSTS", default="gadavault-backend.up.railway.app").strip()
-    if raw_hosts:
-        ALLOWED_HOSTS += [h.strip() for h in raw_hosts.split(",")]
+DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
+
+BASE_URL = config("BASE_URL", default=None)
+
+ALLOWED_HOSTS = config(
+    "DJANGO_ALLOWED_HOSTS",
+    cast=lambda v: [h.strip() for h in v.split(",") if h.strip()],
+    default="127.0.0.1,localhost,.railway.app"
+)
 
 # -----------------------------
-# INSTALLED APPS
+# APPLICATIONS
 # -----------------------------
 INSTALLED_APPS = [
+    # Django core
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    # Third-party
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_yasg",
     "cloudinary",
+
+    # Local apps
     "apps.users",
     "apps.products",
 ]
 
-# -----------------------------
-# MIDDLEWARE
-# -----------------------------
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # Railway-friendly
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -63,9 +65,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# -----------------------------
-# URLS & WSGI
-# -----------------------------
 ROOT_URLCONF = "gada_vault.urls"
 
 TEMPLATES = [
@@ -89,17 +88,31 @@ WSGI_APPLICATION = "gada_vault.wsgi.application"
 # -----------------------------
 # DATABASE
 # -----------------------------
-# Prefer DATABASE_URL if present (Railway provides this automatically)
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"postgres://{config.get('POSTGRES_USER','gada_user')}:{config.get('POSTGRES_PASSWORD','gada_pass')}@{config.get('POSTGRES_HOST','localhost')}:{config.get('POSTGRES_PORT','5432')}/{config.get('POSTGRES_DB','gada_db')}",
-        conn_max_age=600,
-        ssl_require=False
-    )
-}
+CONN_MAX_AGE = config("CONN_MAX_AGE", cast=int, default=600)
+DATABASE_URL = config("DATABASE_URL", default=None)
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=CONN_MAX_AGE,
+            conn_health_checks=True,
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("POSTGRES_DB", default="gada_db"),
+            "USER": config("POSTGRES_USER", default="gada_user"),
+            "PASSWORD": config("POSTGRES_PASSWORD", default="gada_pass"),
+            "HOST": config("POSTGRES_HOST", default="localhost"),
+            "PORT": config("POSTGRES_PORT", default="5432"),
+        }
+    }
 
 # -----------------------------
-# CUSTOM USER MODEL
+# AUTH / USERS
 # -----------------------------
 AUTH_USER_MODEL = "users.User"
 
@@ -120,40 +133,31 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-
 # -----------------------------
-# CLOUDINARY CONFIG
+# CLOUDINARY
 # -----------------------------
 cloudinary.config(
-    cloud_name=config.get("CLOUDINARY_CLOUD_NAME", default=""),
-    api_key=config.get("CLOUDINARY_API_KEY", default=""),
-    api_secret=config.get("CLOUDINARY_API_SECRET", default="")
+    cloud_name=config("CLOUDINARY_CLOUD_NAME", default=""),
+    api_key=config("CLOUDINARY_API_KEY", default=""),
+    api_secret=config("CLOUDINARY_API_SECRET", default=""),
 )
 
 # -----------------------------
-# STATIC & MEDIA FILES
-# -----------------------------
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
-
-# -----------------------------
-# EMAIL SETTINGS
+# EMAIL
 # -----------------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = config.get("EMAIL_HOST", default="smtp.gmail.com")
-EMAIL_PORT = config.get("EMAIL_PORT", default="587", cast=int)
-EMAIL_HOST_USER = config.get("EMAIL_HOST_USER", default="")
-EMAIL_HOST_PASSWORD = config.get("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = config.get("EMAIL_USE_TLS", default="True", cast=bool)
-DEFAULT_FROM_EMAIL = config.get("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk1307@gmail.com")
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
 
-CONTACT_RECEIVER_EMAIL = config.get("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@gadavault.com")
+CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
 
 # -----------------------------
-# CELERY CONFIGURATION
+# CELERY / REDIS
 # -----------------------------
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gada_vault.settings")
 
@@ -161,14 +165,12 @@ celery_app = Celery("gada_vault")
 celery_app.config_from_object("django.conf:settings", namespace="CELERY")
 celery_app.autodiscover_tasks()
 
-# Celery / Redis setup
-REDIS_URL = config.get("REDIS_URL", default="").strip()
+REDIS_URL = config("REDIS_URL", default=None)
 
 if REDIS_URL:
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL
 else:
-    # Fallback for local/dev if Redis is not running
     CELERY_BROKER_URL = "memory://"
     CELERY_RESULT_BACKEND = "cache+memory://"
 
@@ -176,3 +178,31 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+
+# -----------------------------
+# STATIC & MEDIA
+# -----------------------------
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+# -----------------------------
+# INTERNATIONALIZATION
+# -----------------------------
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
+
+# -----------------------------
+# DEFAULTS
+# -----------------------------
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
