@@ -4,44 +4,33 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
-from .tasks import send_contact_email  # <-- Celery async task
+from .tasks import send_contact_email
 
 User = get_user_model()
-
 
 # --- USER MANAGEMENT ---
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    
-    # Define permissions based on action
-    def get_permissions(self):
-        """
-        Instantiates and returns the list of permissions that this view requires.
-        """
-        if self.action == 'create':
-            # Allow new users to be created without authentication
-            permission_classes = [AllowAny]
-        else:
-            # All other actions (list, retrieve, update, destroy) require authentication
-            permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
 
+    def get_permissions(self):
+        if self.action == "create":  # signup
+            return [AllowAny()]
+        return [IsAuthenticated()]
 
 # --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
-    permission_classes = [AllowAny] # This endpoint is always public
+    permission_classes = [AllowAny]  # ✅ Public endpoint
 
     def perform_create(self, serializer):
         contact = serializer.save()
 
-        # Prepare email details
         subject = f"New contact form from {contact.name}"
         body = (
             f"New contact received\n\n"
@@ -52,7 +41,6 @@ class ContactCreateView(generics.CreateAPIView):
         )
         recipient = getattr(settings, "CONTACT_RECEIVER_EMAIL", settings.EMAIL_HOST_USER)
 
-        # Send asynchronously with Celery
         try:
             send_contact_email.delay(
                 contact.id,
@@ -62,8 +50,7 @@ class ContactCreateView(generics.CreateAPIView):
                 str(contact.created_at),
             )
         except Exception as e:
-            # Fallback: send synchronously if Celery not running
-            print("⚠️ Celery task failed, falling back to sync email:", e)
+            print("⚠️ Celery task failed, fallback to sync email:", e)
             try:
                 send_mail(
                     subject,
@@ -75,22 +62,18 @@ class ContactCreateView(generics.CreateAPIView):
             except Exception as inner_e:
                 print("⚠️ Failed to send contact email:", inner_e)
 
-
 # --- SIGNUP ENDPOINT ---
 class SignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [AllowAny] # This endpoint is always public
+    permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
-
-        # Hash password before saving
         if "password" in data:
             data["password"] = make_password(data["password"])
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
-
         return Response(serializer.data, status=status.HTTP_201_CREATED)

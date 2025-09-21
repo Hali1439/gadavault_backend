@@ -1,39 +1,20 @@
 """
-Django settings for gada_vault project.
-Adapted for Railway deployment + local dev.
+Base Django settings for GadaVault project.
+Shared between development and production.
 """
 
 import os
 from pathlib import Path
 from datetime import timedelta
 import cloudinary
+from decouple import config
 import dj_database_url
-from celery import Celery
-from decouple import config  # handles .env automatically
 
-# -----------------------------
-# BASE DIRECTORY
-# -----------------------------
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# -----------------------------
-# SECURITY
-# -----------------------------
 SECRET_KEY = config("DJANGO_SECRET_KEY", default="unsafe-dev-key")
-
 DEBUG = config("DJANGO_DEBUG", default=True, cast=bool)
 
-BASE_URL = config("BASE_URL", default=None)
-
-ALLOWED_HOSTS = config(
-    "DJANGO_ALLOWED_HOSTS",
-    cast=lambda v: [h.strip() for h in v.split(",") if h.strip()],
-    default="127.0.0.1,localhost,.railway.app"
-)
-
-# -----------------------------
-# APPLICATIONS
-# -----------------------------
 INSTALLED_APPS = [
     # Django core
     "django.contrib.admin",
@@ -48,15 +29,19 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "drf_yasg",
     "cloudinary",
+    "corsheaders",
 
     # Local apps
-    "apps.users",
-    "apps.products",
+    "apps.users.apps.UsersConfig",
+    "apps.products.apps.ProductsConfig",
+    "apps.designers.apps.DesignersConfig",
 ]
 
+
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # Railway-friendly
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -95,10 +80,10 @@ if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.config(
             default=DATABASE_URL,
-            conn_max_age=CONN_MAX_AGE
+            conn_max_age=CONN_MAX_AGE,
+            conn_health_checks=True,
         )
     }
-
 else:
     DATABASES = {
         "default": {
@@ -111,14 +96,8 @@ else:
         }
     }
 
-# -----------------------------
-# AUTH / USERS
-# -----------------------------
 AUTH_USER_MODEL = "users.User"
 
-# -----------------------------
-# REST FRAMEWORK
-# -----------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -153,20 +132,13 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
 
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@halimamuk1307@gmail.com")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@gadavault.com")
 CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
 
 # -----------------------------
 # CELERY / REDIS
 # -----------------------------
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "gada_vault.settings")
-
-celery_app = Celery("gada_vault")
-celery_app.config_from_object("django.conf:settings", namespace="CELERY")
-celery_app.autodiscover_tasks()
-
 REDIS_URL = config("REDIS_URL", default=None)
-
 if REDIS_URL:
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL
@@ -184,7 +156,6 @@ CELERY_TIMEZONE = "UTC"
 # -----------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-
 STORAGES = {
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
@@ -193,14 +164,6 @@ STORAGES = {
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
-# -----------------------------
-# INTERNATIONALIZATION
-# -----------------------------
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
-USE_I18N = True
-USE_TZ = True
 
 # -----------------------------
 # DEFAULTS
