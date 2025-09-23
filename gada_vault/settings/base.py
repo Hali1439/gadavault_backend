@@ -1,3 +1,4 @@
+# gada_vault/settings/base.py
 """
 Base Django settings for GadaVault project.
 Shared between development and production.
@@ -71,19 +72,32 @@ TEMPLATES = [
 WSGI_APPLICATION = "gada_vault.wsgi.application"
 
 # -----------------------------
-# DATABASE
+# # -----------------------------
+# DATABASE (robust to dj-database-url version)
 # -----------------------------
 CONN_MAX_AGE = config("CONN_MAX_AGE", cast=int, default=600)
 DATABASE_URL = config("DATABASE_URL", default=None)
 
 if DATABASE_URL:
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=CONN_MAX_AGE,
-            conn_health_checks=True,
-        )
-    }
+    import dj_database_url
+
+    # Try the new signature first (conn_health_checks), fall back if older package.
+    try:
+        DATABASES = {
+            "default": dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=CONN_MAX_AGE,
+                conn_health_checks=True,
+            )
+        }
+    except TypeError:
+        # older dj-database-url doesn't accept conn_health_checks
+        DATABASES = {
+            "default": dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=CONN_MAX_AGE,
+            )
+        }
 else:
     DATABASES = {
         "default": {
@@ -95,6 +109,7 @@ else:
             "PORT": config("POSTGRES_PORT", default="5432"),
         }
     }
+
 
 AUTH_USER_MODEL = "users.User"
 

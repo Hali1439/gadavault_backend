@@ -1,3 +1,4 @@
+# apps/products/management/commands/seed_products.py
 from django.core.management.base import BaseCommand
 from apps.products.models import Product
 
