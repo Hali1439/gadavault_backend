@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 
-BASE_DIR = Path(file).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # SECURITY: Load secret from environment (do NOT commit real key to source)
 SECRET_KEY = config("DJANGO_SECRET_KEY")  # Required: set this in .env for production
