@@ -1,25 +1,38 @@
+# gada_vault/settings/base.py
+"""
+Base Django settings for GadaVault.
+- Uses python-decouple for environment variables.
+- If DATABASE_URL is present (Railway), it will be parsed and used.
+- Falls back to POSTGRES_* for local development.
+"""
+
 import os
-import cloudinary
 from pathlib import Path
 from datetime import timedelta
+
 from decouple import config
+
+# Optional dj_database_url used to parse DATABASE_URL if present
+try:
+    import dj_database_url
+except Exception:
+    dj_database_url = None
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # -----------------------------
-# Security
+# Core
 # -----------------------------
-SECRET_KEY = config("DJANGO_SECRET_KEY")  # from .env
+SECRET_KEY = config("DJANGO_SECRET_KEY")  # required in production; keep it secret
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
 
-# Allowed hosts
-ALLOWED_HOSTS = [host.strip() for host in config("DJANGO_ALLOWED_HOSTS", default="").split(",") if host.strip()]
+# ALLOWED_HOSTS read from env (comma-separated)
+ALLOWED_HOSTS = [h.strip() for h in config("DJANGO_ALLOWED_HOSTS", default="").split(",") if h.strip()]
 
 # -----------------------------
-# Installed apps
+# Installed apps / middleware (unchanged, tidy)
 # -----------------------------
 INSTALLED_APPS = [
-    # Django apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -27,24 +40,19 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third-party
     "rest_framework",
     "rest_framework_simplejwt",
     "drf_yasg",
     "cloudinary",
     "corsheaders",
 
-    # Local apps
     "apps.users.apps.UsersConfig",
     "apps.products.apps.ProductsConfig",
     "apps.designers.apps.DesignersConfig",
 ]
 
-# -----------------------------
-# Middleware
-# -----------------------------
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",  # keep CORS first
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -76,35 +84,50 @@ TEMPLATES = [
 WSGI_APPLICATION = "gada_vault.wsgi.application"
 
 # -----------------------------
-# Database
+# Database: prefer DATABASE_URL (Railway). Fallback to POSTGRES_* for local dev.
 # -----------------------------
 CONN_MAX_AGE = config("CONN_MAX_AGE", cast=int, default=600)
+DATABASE_URL = config("DATABASE_URL", default="")
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("POSTGRES_DB", default="oda_db"),
-        "USER": config("POSTGRES_USER", default="oda_user"),
-        "PASSWORD": config("POSTGRES_PASSWORD", default=""),
-        "HOST": config("POSTGRES_HOST", default="localhost"),
-        "PORT": config("POSTGRES_PORT", default="5432"),
-        "OPTIONS": {
-            "options": "-c search_path=public"
-        },
-        "CONN_MAX_AGE": CONN_MAX_AGE,
+if DATABASE_URL and dj_database_url:
+    # Use DATABASE_URL when available (this is the Railway pattern).
+    # Best practice: parse the URL and provide conn_max_age and sslmode.
+    db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=CONN_MAX_AGE)
+    # Ensure correct engine for Postgres
+    db_config.setdefault("ENGINE", "django.db.backends.postgresql")
+    # Ensure SSL mode when connecting to managed services (Railway often requires this).
+    opts = db_config.setdefault("OPTIONS", {})
+    # Don't clobber existing options; only set sslmode if not provided
+    if "sslmode" not in opts and "sslmode=require" not in DATABASE_URL.lower():
+        opts["sslmode"] = "require"
+    # Ensure search_path to public so Django sees the right schema
+    opts.setdefault("options", "-c search_path=public")
+    DATABASES = {"default": db_config}
+else:
+    # Local/dev fallback: use POSTGRES_* env vars (kept for local convenience)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": config("POSTGRES_DB", default="oda_db"),
+            "USER": config("POSTGRES_USER", default="oda_user"),
+            "PASSWORD": config("POSTGRES_PASSWORD", default=""),
+            "HOST": config("POSTGRES_HOST", default="localhost"),
+            "PORT": config("POSTGRES_PORT", default="5432"),
+            "CONN_MAX_AGE": CONN_MAX_AGE,
+            "OPTIONS": {"options": "-c search_path=public"},
+        }
     }
-}
 
+# Explicit auth user
 AUTH_USER_MODEL = "users.User"
-DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # -----------------------------
 # DRF & JWT
 # -----------------------------
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
+    "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
+    ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
 }
@@ -118,6 +141,7 @@ SIMPLE_JWT = {
 # -----------------------------
 # Cloudinary
 # -----------------------------
+import cloudinary
 cloudinary.config(
     cloud_name=config("CLOUDINARY_CLOUD_NAME", default=""),
     api_key=config("CLOUDINARY_API_KEY", default=""),
@@ -139,7 +163,7 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="no-reply@example.com"
 CONTACT_RECEIVER_EMAIL = config("CONTACT_RECEIVER_EMAIL", default=EMAIL_HOST_USER)
 
 # -----------------------------
-# Celery / Redis
+# Redis / Celery
 # -----------------------------
 REDIS_URL = config("REDIS_URL", default=None)
 CELERY_BROKER_URL = REDIS_URL or "memory://"
@@ -150,19 +174,18 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 
 # -----------------------------
-# Static & Media
+# Static / Media
 # -----------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"}
 }
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # -----------------------------
-# Security
+# Security for production
 # -----------------------------
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
@@ -171,12 +194,13 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
 
 # -----------------------------
-# Sentry
+# Sentry (optional)
 # -----------------------------
 SENTRY_DSN = config("SENTRY_DSN", default="")
 if not DEBUG and SENTRY_DSN:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
+
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[DjangoIntegration()],
@@ -193,3 +217,5 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "root": {"handlers": ["console"], "level": "INFO"},
 }
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

@@ -1,23 +1,11 @@
+# gada_vault/settings/prod.py
 from .base import *
 
-# Production settings
 DEBUG = False
 
-# Allowed hosts must be hostnames (no scheme or trailing slash)
-ALLOWED_HOSTS = ["gadavaultbackend-production.up.railway.app"]  # e.g. Railway domain
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["gadavaultbackend-production.up.railway.app"]
 
-# Frontend on Vercel
-CORS_ALLOWED_ORIGINS = [
-    "https://gadavault.vercel.app",
-]
-
-# CSRF trusted origins (include https)
-CSRF_TRUSTED_ORIGINS = [
-    "https://gadavault.vercel.app",
-]
-
-# Security settings (in addition to base)
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_BROWSER_XSS_FILTER = True
+# Comma-separated env vars
+CORS_ALLOWED_ORIGINS = [o.strip() for o in config("CORS_ALLOWED_ORIGINS", default="").split(",") if o.strip()]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in config("CSRF_TRUSTED_ORIGINS", default="").split(",") if o.strip()]
