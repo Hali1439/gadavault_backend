@@ -11,25 +11,28 @@ schema_view = get_schema_view(
         description="GadaVault — products, designers, escrow, and payments API.",
     ),
     public=True,
-    permission_classes=(permissions.AllowAny,),  # Consider Admin-only in prod
+    permission_classes=(permissions.AllowAny,),  # Consider stricter permissions in prod
 )
 
 urlpatterns = [
-    # Django admin
     path("admin/", admin.site.urls),
 
-    # API endpoints (no version prefix)
+    # App endpoints (no version prefix)
     path("api/users/", include("apps.users.urls")),
     path("api/products/", include("apps.products.urls")),
     path("api/designers/", include("apps.designers.urls")),
 
-    # Versioned API endpoints (optional)
+    # Versioned endpoints (using /api/v1/ as alias)
     path("api/v1/users/", include("apps.users.urls")),
     path("api/v1/products/", include("apps.products.urls")),
     path("api/v1/designers/", include("apps.designers.urls")),
 
-    # Swagger / Redoc
-    re_path(r"^swagger(?P<format>\.json|\.yaml)$", schema_view.without_ui(cache_timeout=0), name="schema-json"),
+    # Swagger / Redoc documentation
+    re_path(
+        r"^swagger(?P<format>\.json|\.yaml)$",
+        schema_view.without_ui(cache_timeout=0),
+        name="schema-json",
+    ),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path("redoc/", schema_view.with_ui("redoc", cache_timeout=0), name="schema-redoc"),
 ]

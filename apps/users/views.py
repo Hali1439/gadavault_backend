@@ -1,32 +1,41 @@
 from django.conf import settings
 from django.core.mail import send_mail
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
 
 User = get_user_model()
 
+# --- USER MANAGEMENT ---
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        if self.action == "create":  # signup via POST /api/users/
+        if self.action == "create":  # signup
             return [AllowAny()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated and not user.is_staff:
-            # Non-admins see only their own record
-            return User.objects.filter(pk=user.pk)
-        return super().get_queryset()
+        # Admins can see all users; others can only see themselves
+        if user.is_staff:
+            return User.objects.all()
+        return User.objects.filter(id=user.id)
 
+    def perform_update(self, serializer):
+        """
+        Ensure password is hashed on update if changed.
+        """
+        if 'password' in serializer.validated_data:
+            serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
+        return super().perform_update(serializer)
+
+# --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
@@ -34,7 +43,6 @@ class ContactCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         contact = serializer.save()
-
         subject = f"New contact form from {contact.name}"
         body = (
             f"New contact received\n\n"
@@ -46,6 +54,8 @@ class ContactCreateView(generics.CreateAPIView):
         recipient = getattr(settings, "CONTACT_RECEIVER_EMAIL", settings.EMAIL_HOST_USER)
 
         try:
+            # Use Celery task to send email asynchronously
+            from .tasks import send_contact_email
             send_contact_email.delay(
                 contact.id,
                 contact.name,
@@ -54,8 +64,7 @@ class ContactCreateView(generics.CreateAPIView):
                 str(contact.created_at),
             )
         except Exception as e:
-            # Fallback to synchronous send if Celery fails
-            print("⚠️ Celery task failed, sending email synchronously:", e)
+            print("⚠️ Celery task failed, fallback to sync email:", e)
             try:
                 send_mail(
                     subject,
@@ -67,6 +76,7 @@ class ContactCreateView(generics.CreateAPIView):
             except Exception as inner_e:
                 print("⚠️ Failed to send contact email:", inner_e)
 
+# --- SIGNUP ENDPOINT ---
 class SignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
