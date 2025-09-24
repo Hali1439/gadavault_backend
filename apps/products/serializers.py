@@ -1,24 +1,24 @@
-# apps/products/serializers.py
 from rest_framework import serializers
 from .models import Product, Category, Artisan
-from apps.designers.models import DesignerProfile
 
 class ArtisanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Artisan
-        fields = ['id','name','bio','country','profile_image','metadata','created_at']
+        fields = ['id', 'name', 'bio', 'country', 'profile_image', 'metadata', 'created_at']
 
 class ProductSerializer(serializers.ModelSerializer):
     artisan = ArtisanSerializer(read_only=True)
     artisan_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
+
     class Meta:
         model = Product
         fields = [
-            'id','seller','artisan','artisan_id','category','name','slug','description',
-            'price','stock','attributes','images','provenance','story_markdown',
-            'origin_region','royalty_percent','published','created_at'
+            'id', 'seller', 'artisan', 'artisan_id', 'category', 'name', 'slug',
+            'description', 'price', 'stock', 'attributes', 'images',
+            'provenance', 'story_markdown', 'origin_region',
+            'royalty_percent', 'published', 'created_at'
         ]
-        read_only_fields = ['id','seller','provenance','created_at']
+        read_only_fields = ['id', 'seller', 'provenance', 'created_at']
 
     def create(self, validated_data):
         artisan_id = validated_data.pop('artisan_id', None)
@@ -29,7 +29,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        # protect provenance field in updates by non-sellers
-        if 'provenance' in validated_data and instance.seller != self.context['request'].user:
+        # Prevent others from modifying provenance
+        if 'provenance' in validated_data and instance.seller_id != self.context['request'].user.id:
             validated_data.pop('provenance', None)
         return super().update(instance, validated_data)

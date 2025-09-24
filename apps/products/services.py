@@ -1,11 +1,11 @@
-# apps/products/services.py
-import hashlib, json
+import hashlib
+import json
 
 def pin_product_to_ipfs(product):
     """
     Demo stub for pinning product provenance.
-    Returns deterministic fake IPFS-like hash for demo.
-    Replace with Pinata/Infura/actual IPFS client in production.
+    Returns a deterministic fake IPFS-like hash for demonstration.
+    In production, replace with a real IPFS/Pinata integration.
     """
     payload = {
         "id": str(product.id),

@@ -1,11 +1,7 @@
 # gada_vault/settings/__init__.py
-"""
-Auto-detect environment (Railway vs Local) and load settings.
-"""
-
 import os
 
-# Railway sets this automatically in containers
+# Initialize Django settings depending on environment: use production settings on Railway.
 if os.getenv("RAILWAY_ENVIRONMENT"):
     from .prod import *
 else:
