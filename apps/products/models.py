@@ -1,7 +1,9 @@
+# apps/products/models.py
 import uuid
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+
 
 class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -9,8 +11,9 @@ class Category(models.Model):
     slug = models.SlugField(max_length=255, unique=True)
     created_at = models.DateTimeField(default=timezone.now)
 
-    def str(self):
+    def __str__(self):  # fixed method name
         return self.name
+
 
 class Artisan(models.Model):
     """
@@ -24,8 +27,9 @@ class Artisan(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
 
-    def str(self):
+    def __str__(self):  # fixed method name
         return self.name
+
 
 class Product(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -34,6 +38,8 @@ class Product(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="products",
+        null=True,       # <-- TEMPORARILY nullable for safe migration
+        blank=True,
         help_text="The account that owns this product (billing, payouts)."
     )
     designer = models.ForeignKey(
@@ -61,9 +67,19 @@ class Product(models.Model):
     )
 
     name = models.CharField(max_length=400)
-    slug = models.SlugField(max_length=400, unique=True)
+    slug = models.SlugField(
+        max_length=400,
+        unique=True,
+        null=True,   # <-- TEMPORARILY nullable for safe migration
+        blank=True
+    )
     description = models.TextField(blank=True)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.00,
+        help_text="Base retail price of the product."
+    )
     stock = models.IntegerField(default=0)
     attributes = models.JSONField(default=dict, blank=True)  # e.g. size, material
     images = models.JSONField(default=list, blank=True)       # list of {url, alt, order}
@@ -72,7 +88,12 @@ class Product(models.Model):
     story_markdown = models.TextField(blank=True)
     origin_region = models.CharField(max_length=128, blank=True)
 
-    royalty_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    royalty_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.00,
+        help_text="Royalty percentage paid to the creator on resale."
+    )
 
     published = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
@@ -84,5 +105,5 @@ class Product(models.Model):
             models.Index(fields=["category", "price", "created_at"]),
         ]
 
-    def str(self):
+    def __str__(self):  # fixed method name
         return f"{self.name} (ID: {self.id})"

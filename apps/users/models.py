@@ -16,7 +16,8 @@ class User(AbstractUser):
 
     avatar = models.URLField(blank=True, null=True)
     country = models.CharField(max_length=128, blank=True, null=True)
-    bio = models.TextField(blank=True)
+    bio = models.TextField(null=True, blank=True)
+
 
     def is_buyer(self):
         return self.role == "buyer"
