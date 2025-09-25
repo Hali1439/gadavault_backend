@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "cloudinary",
     "corsheaders",
 
+
     "apps.users.apps.UsersConfig",
     "apps.products.apps.ProductsConfig",
     "apps.designers.apps.DesignersConfig",
@@ -127,6 +128,9 @@ AUTH_USER_MODEL = "users.User"
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ( 
+        "rest_framework.permissions.AllowAny",
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GadaVault API Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+  <div class="min-h-screen flex flex-col items-center justify-center p-6">
+    
+    <!-- Header -->
+    <header class="text-center mb-12">
+      <h1 class="text-4xl md:text-5xl font-extrabold text-indigo-600">⚡ GadaVault</h1>
+      <p class="mt-3 text-lg text-gray-700">Your API gateway to Products, Designers, Escrow, and Payments.</p>
+      <p class="mt-1 text-sm text-gray-500">Explore all available endpoints below.</p>
+    </header>
+
+    <!-- Links Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl w-full">
+      <!-- Loop endpoints -->
+      {% for name, url in endpoints %}
+      <a href="{{ url }}" class="block p-5 rounded-xl shadow hover:shadow-lg bg-white border hover:border-indigo-500 transition">
+        <h2 class="font-semibold text-indigo-600">{{ name }}</h2>
+        <p class="text-sm text-gray-500">{{ url }}</p>
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-gray-500 text-sm">
+      Built by Halima M for GadaVault.
+    </footer>
+  </div>
+</body>
+</html>

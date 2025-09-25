@@ -1,3 +1,4 @@
+# apps/users/views.py
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
@@ -5,6 +6,7 @@ from django.contrib.auth.hashers import make_password
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
 
@@ -16,13 +18,14 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        if self.action == "create":  # signup
+        # Signup (create) is open; all other actions require auth
+        if self.action == "create":
             return [AllowAny()]
         return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
-        # Admins can see all users; others can only see themselves
+        # Admins see all users; others only see themselves
         if user.is_staff:
             return User.objects.all()
         return User.objects.filter(id=user.id)
@@ -31,15 +34,19 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         Ensure password is hashed on update if changed.
         """
-        if 'password' in serializer.validated_data:
-            serializer.validated_data['password'] = make_password(serializer.validated_data['password'])
+        if "password" in serializer.validated_data:
+            serializer.validated_data["password"] = make_password(
+                serializer.validated_data["password"]
+            )
         return super().perform_update(serializer)
+
 
 # --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [AllowAny]   # 🚀 Public access
+    authentication_classes = []       # 🚀 Disable JWT for this endpoint
 
     def perform_create(self, serializer):
         contact = serializer.save()
@@ -54,7 +61,7 @@ class ContactCreateView(generics.CreateAPIView):
         recipient = getattr(settings, "CONTACT_RECEIVER_EMAIL", settings.EMAIL_HOST_USER)
 
         try:
-            # Use Celery task to send email asynchronously
+            # Try Celery for async
             from .tasks import send_contact_email
             send_contact_email.delay(
                 contact.id,
@@ -76,11 +83,17 @@ class ContactCreateView(generics.CreateAPIView):
             except Exception as inner_e:
                 print("⚠️ Failed to send contact email:", inner_e)
 
+
 # --- SIGNUP ENDPOINT ---
 class SignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+
+    def get_authenticators(self):
+        # 🚫 nuke JWT for this endpoint
+        return []
+
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -88,5 +101,15 @@ class SignupView(generics.CreateAPIView):
             data["password"] = make_password(data["password"])
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        user = serializer.save()
+
+        # 🚀 Auto-generate JWT tokens after signup
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {
+                "user": serializer.data,
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            },
+            status=status.HTTP_201_CREATED,
+        )
