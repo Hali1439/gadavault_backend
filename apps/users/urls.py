@@ -9,6 +9,7 @@ router.register(r"", UserViewSet, basename="user")
 
 urlpatterns = [
     path("auth/signup/", SignupView.as_view(), name="signup"),
+    path("signup/", SignupView.as_view(), name="signup_alias"),  # Alias for incorrect client requests
     path("auth/contact/", ContactCreateView.as_view(), name="contact"),
 
     # JWT

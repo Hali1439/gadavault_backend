@@ -7,6 +7,7 @@ Base Django settings for GadaVault.
 """
 
 import os
+import sys
 from pathlib import Path
 from datetime import timedelta
 
@@ -42,9 +43,11 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework.authtoken",  # Added for token authentication
     "drf_yasg",
     "cloudinary",
     "corsheaders",
+     "drf_spectacular",
 
 
     "apps.users.apps.UsersConfig",
@@ -85,39 +88,44 @@ TEMPLATES = [
 WSGI_APPLICATION = "gada_vault.wsgi.application"
 
 # -----------------------------
-# Database: prefer DATABASE_URL (Railway). Fallback to POSTGRES_* for local dev.
+# Database: Use SQLite for testing, PostgreSQL otherwise
 # -----------------------------
 CONN_MAX_AGE = config("CONN_MAX_AGE", cast=int, default=600)
 DATABASE_URL = config("DATABASE_URL", default="")
 
-if DATABASE_URL and dj_database_url:
-    # Use DATABASE_URL when available (this is the Railway pattern).
-    # Best practice: parse the URL and provide conn_max_age and sslmode.
-    db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=CONN_MAX_AGE)
-    # Ensure correct engine for Postgres
-    db_config.setdefault("ENGINE", "django.db.backends.postgresql")
-    # Ensure SSL mode when connecting to managed services (Railway often requires this).
-    opts = db_config.setdefault("OPTIONS", {})
-    # Don't clobber existing options; only set sslmode if not provided
-    if "sslmode" not in opts and "sslmode=require" not in DATABASE_URL.lower():
-        opts["sslmode"] = "require"
-    # Ensure search_path to public so Django sees the right schema
-    opts.setdefault("options", "-c search_path=public")
-    DATABASES = {"default": db_config}
-else:
-    # Local/dev fallback: use POSTGRES_* env vars (kept for local convenience)
+# Use SQLite for testing
+if 'test' in sys.argv or 'pytest' in sys.argv or os.environ.get('DJANGO_TEST') == 'true':
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.postgresql",
-            "NAME": config("POSTGRES_DB", default="oda_db"),
-            "USER": config("POSTGRES_USER", default="oda_user"),
-            "PASSWORD": config("POSTGRES_PASSWORD", default=""),
-            "HOST": config("POSTGRES_HOST", default="localhost"),
-            "PORT": config("POSTGRES_PORT", default="5432"),
-            "CONN_MAX_AGE": CONN_MAX_AGE,
-            "OPTIONS": {"options": "-c search_path=public"},
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
         }
     }
+else:
+    # Use PostgreSQL for development/production
+    if DATABASE_URL and dj_database_url:
+        # Use DATABASE_URL when available (this is the Railway pattern).
+        db_config = dj_database_url.parse(DATABASE_URL, conn_max_age=CONN_MAX_AGE)
+        db_config.setdefault("ENGINE", "django.db.backends.postgresql")
+        opts = db_config.setdefault("OPTIONS", {})
+        if "sslmode" not in opts and "sslmode=require" not in DATABASE_URL.lower():
+            opts["sslmode"] = "require"
+        opts.setdefault("options", "-c search_path=public")
+        DATABASES = {"default": db_config}
+    else:
+        # Local/dev fallback: use POSTGRES_* env vars
+        DATABASES = {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": config("POSTGRES_DB", default="gada_vault_db"),
+                "USER": config("POSTGRES_USER", default="gada_user"),
+                "PASSWORD": config("POSTGRES_PASSWORD", default=""),
+                "HOST": config("POSTGRES_HOST", default="localhost"),
+                "PORT": config("POSTGRES_PORT", default="5432"),
+                "CONN_MAX_AGE": CONN_MAX_AGE,
+                "OPTIONS": {"options": "-c search_path=public"},
+            }
+        }
 
 # Explicit auth user
 AUTH_USER_MODEL = "users.User"
@@ -126,15 +134,26 @@ AUTH_USER_MODEL = "users.User"
 # DRF & JWT
 # -----------------------------
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": ( 
-        "rest_framework.permissions.AllowAny",
+
+    "DEFAULT_PERMISSION_CLASSES": (
+        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ),
+
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ],
 }
+
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),

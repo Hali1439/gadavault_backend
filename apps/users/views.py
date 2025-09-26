@@ -3,32 +3,48 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, status, viewsets, mixins
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.decorators import action
 from .serializers import UserSerializer, ContactSerializer
 from .models import Contact
 
 User = get_user_model()
 
 # --- USER MANAGEMENT ---
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(viewsets.GenericViewSet, 
+                  mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin,
+                  mixins.ListModelMixin):
+    """
+    User viewset that doesn't allow creation (use SignupView instead)
+    """
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
     def get_permissions(self):
-        # Signup (create) is open; all other actions require auth
-        if self.action == "create":
-            return [AllowAny()]
-        return [IsAuthenticated()]
+        if self.action == 'list':
+            # Only admin can list all users
+            return [IsAdminUser()]
+        elif self.action in ['retrieve', 'update', 'partial_update']:
+            # Users can view/update their own profile
+            return [IsAuthenticated()]
+        return [IsAuthenticated()]  # Default
 
     def get_queryset(self):
         user = self.request.user
-        # Admins see all users; others only see themselves
         if user.is_staff:
             return User.objects.all()
+        # Users can only see their own profile
         return User.objects.filter(id=user.id)
+
+    def retrieve(self, request, *args, **kwargs):
+        # Users can only retrieve their own profile
+        if int(kwargs['pk']) != request.user.id and not request.user.is_staff:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        return super().retrieve(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         """
@@ -40,13 +56,19 @@ class UserViewSet(viewsets.ModelViewSet):
             )
         return super().perform_update(serializer)
 
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """Get current user profile"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
 
 # --- CONTACT FORM ENDPOINT ---
 class ContactCreateView(generics.CreateAPIView):
     queryset = Contact.objects.all()
     serializer_class = ContactSerializer
-    permission_classes = [AllowAny]   # 🚀 Public access
-    authentication_classes = []       # 🚀 Disable JWT for this endpoint
+    permission_classes = [AllowAny]
+    authentication_classes = []
 
     def perform_create(self, serializer):
         contact = serializer.save()
@@ -89,21 +111,24 @@ class SignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
-
-    def get_authenticators(self):
-        # 🚫 nuke JWT for this endpoint
-        return []
-
+    authentication_classes = []
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
+        
+        # Handle password hashing
         if "password" in data:
             data["password"] = make_password(data["password"])
+        
+        # Ensure username exists (use email if not provided)
+        if "username" not in data and "email" in data:
+            data["username"] = data["email"]
+            
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # 🚀 Auto-generate JWT tokens after signup
+        # Generate JWT tokens after signup
         refresh = RefreshToken.for_user(user)
         return Response(
             {

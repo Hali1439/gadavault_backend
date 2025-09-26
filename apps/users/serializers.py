@@ -5,12 +5,18 @@ from .models import Contact
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=True)
+    
     class Meta:
         model = User
-        exclude = (
-            "password", "is_superuser", "is_staff",
-            "groups", "user_permissions"
-        )
+        fields = ('id', 'username', 'email', 'first_name', 'last_name', 'role', 'avatar', 'country', 'bio', 'is_staff', 'is_active', 'date_joined')
+        read_only_fields = ('id', 'is_staff', 'is_active', 'date_joined')
+        
+    def create(self, validated_data):
+        # Ensure username exists
+        if 'username' not in validated_data and 'email' in validated_data:
+            validated_data['username'] = validated_data['email']
+        return super().create(validated_data)
 
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:

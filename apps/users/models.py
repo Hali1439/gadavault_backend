@@ -1,6 +1,8 @@
+# apps/users/models.py
 import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
 
 class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -18,6 +20,15 @@ class User(AbstractUser):
     country = models.CharField(max_length=128, blank=True, null=True)
     bio = models.TextField(null=True, blank=True)
 
+    def full_name(self):
+        """Return full name combining first_name and last_name"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        return self.username
 
     def is_buyer(self):
         return self.role == "buyer"
@@ -31,11 +42,13 @@ class User(AbstractUser):
     def is_artist(self):
         return self.role == "artist"
 
-    def str(self):
-        return f"{self.username} ({self.role})"
+    def __str__(self):
+        return f"{self.full_name()} ({self.role})"
+
 
 class Contact(models.Model):
-    name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=150, blank=True, default="")
+    last_name = models.CharField(max_length=150, blank=True, null=True)
     email = models.EmailField()
     subject = models.CharField(max_length=255)
     message = models.TextField()
@@ -44,5 +57,11 @@ class Contact(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-    def str(self):
-        return f"Contact from {self.name} - {self.subject}"
+    def full_name(self):
+        """Return contact's full name."""
+        if self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.first_name
+
+    def __str__(self):
+        return f"Contact from {self.full_name()} - {self.subject}"
