@@ -5,6 +5,9 @@
 .env.test.local
 .env.production.local
 .env.prod
+.env.railway
+.env.render
+
 
 # Logs
 logs
