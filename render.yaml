@@ -1,0 +1,29 @@
+```yaml
+services:
+  web:
+    type: web
+    name: gadavault-backend
+    env: python
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: |
+      python manage.py migrate --noinput && \
+      gunicorn gadavault_backend.wsgi:application --bind 0.0.0.0:8000 --workers 4
+    envVars:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL}
+      CONTACT_RECEIVER_EMAIL: ${CONTACT_RECEIVER_EMAIL}
+      RENDER_ENVIRONMENT: production
+```
