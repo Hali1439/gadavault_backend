@@ -49,4 +49,4 @@ EXPOSE 8000
 # -------------------------
 # Start Gunicorn server
 # -------------------------
-CMD ["gunicorn", "gadavault_backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "gada_vault.wsgi:application", "--bind", "0.0.0.0:$PORT"]
