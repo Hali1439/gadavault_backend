@@ -26,6 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # -----------------------------
 SECRET_KEY = config("DJANGO_SECRET_KEY")  # required in production; keep it secret
 DEBUG = config("DJANGO_DEBUG", default=False, cast=bool)
+APPEND_SLASH = False
 
 # ALLOWED_HOSTS read from env (comma-separated)
 ALLOWED_HOSTS = [h.strip() for h in config("DJANGO_ALLOWED_HOSTS", default="").split(",") if h.strip()]

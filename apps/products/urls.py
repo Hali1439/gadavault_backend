@@ -2,7 +2,7 @@
 from rest_framework.routers import DefaultRouter
 from .views import ProductViewSet, ArtisanViewSet
 
-router = DefaultRouter()
+router = DefaultRouter(trailing_slash=False)
 # Use blank prefix for products to avoid '/products/products/'
 router.register(r'', ProductViewSet, basename='product')
 router.register(r'artisans', ArtisanViewSet, basename='artisan')

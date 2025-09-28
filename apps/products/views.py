@@ -20,7 +20,7 @@ class ArtisanViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related('artisan','category','seller').filter(is_deleted=False)
+    queryset = Product.objects.select_related('artisan','category','seller').filter(is_deleted=False).order_by('-created_at')
     serializer_class = ProductSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsSellerOrReadOnly]
     lookup_field = 'slug'

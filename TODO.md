@@ -1,8 +1,8 @@
-# TODO: Fix Unauthorized Signup Endpoint Issue
+# TODO: Fix APPEND_SLASH Error and URL Issues
 
-## Tasks
-- [x] Add URL alias for `/api/users/signup/` in `apps/users/urls.py` to map to `SignupView`
-- [x] Update test URL in `apps/users/tests/test_api.py` to include `/api/` prefix
-- [x] Run Django migrations (if needed)
-- [x] Test the fix by running the dev server and simulating POST request
-- [x] Run tests to ensure no regressions
+- [x] Add APPEND_SLASH = False to gada_vault/settings/base.py
+- [x] Set trailing_slash=False in apps/products/urls.py router
+- [x] Add order_by('-created_at') to ProductViewSet queryset in apps/products/views.py
+- [ ] Restart Django server to apply changes
+- [ ] Test API endpoints (GET, POST, PUT, PATCH, DELETE /api/products without slash) to verify no 404 or RuntimeError
+- [ ] Verify pagination warning is resolved

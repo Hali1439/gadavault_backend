@@ -72,10 +72,10 @@ class ContactCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         contact = serializer.save()
-        subject = f"New contact form from {contact.name}"
+        subject = f"New contact form from {contact.full_name()}"
         body = (
             f"New contact received\n\n"
-            f"Name: {contact.name}\n"
+            f"Name: {contact.full_name()}\n"
             f"Email: {contact.email}\n"
             f"Message:\n{contact.message}\n\n"
             f"Received at: {contact.created_at}\n"
@@ -87,7 +87,7 @@ class ContactCreateView(generics.CreateAPIView):
             from .tasks import send_contact_email
             send_contact_email.delay(
                 contact.id,
-                contact.name,
+                contact.full_name(),
                 contact.email,
                 contact.message,
                 str(contact.created_at),
