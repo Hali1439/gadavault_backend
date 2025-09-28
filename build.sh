@@ -22,29 +22,48 @@ echo "📦 Installing Python dependencies..."
 pip install --upgrade pip
 pip install -r requirements.txt
 
+# Platform-specific dependency installation
+case $PLATFORM in
+    "railway")
+        echo "🚄 Installing Railway-specific dependencies..."
+        # Add any Railway-specific packages if needed
+        ;;
+    "render")
+        echo "🎨 Installing Render-specific dependencies..."
+        # Add any Render-specific packages if needed
+        ;;
+    "local")
+        echo "💻 Installing local development dependencies..."
+        # pip install -r requirements-dev.txt  # Uncomment if you have dev requirements
+        ;;
+esac
+
 # Collect static files
 echo "📁 Collecting static files..."
 python manage.py collectstatic --noinput --clear
 
-# Run migrations if not in local development
+# Run migrations for production platforms
 if [ "$PLATFORM" != "local" ]; then
     echo "🗃️ Running database migrations..."
     python manage.py migrate --noinput
+    
+    # Platform-specific data seeding
+    case $PLATFORM in
+        "railway")
+            echo "🚄 Running Railway-specific data setup..."
+            # python manage.py seed_products  # Uncomment if you have seed commands
+            ;;
+        "render")
+            echo "🎨 Running Render-specific data setup..."
+            # python manage.py seed_products  # Uncomment if you have seed commands
+            ;;
+    esac
 fi
 
-# Platform-specific build steps
-case $PLATFORM in
-    "railway")
-        echo "🚄 Applying Railway-specific configurations..."
-        # Railway-specific setup if needed
-        ;;
-    "render")
-        echo "🎨 Applying Render-specific configurations..."
-        # Render-specific setup if needed  
-        ;;
-    "local")
-        echo "💻 Local build complete"
-        ;;
-esac
+# Create superuser for local development (optional)
+if [ "$PLATFORM" = "local" ] && [ "$CREATE_SUPERUSER" = "true" ]; then
+    echo "👤 Creating superuser..."
+    python manage.py createsuperuser --noinput || true
+fi
 
 echo "✅ Build completed successfully for $PLATFORM"

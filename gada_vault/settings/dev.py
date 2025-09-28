@@ -1,34 +1,57 @@
 # gada_vault/settings/dev.py
-from .base import INSTALLED_APPS as BASE_APPS, MIDDLEWARE as BASE_MIDDLEWARE, BASE_DIR, config
+from .base import *
 
 DEBUG = True
-SECRET_KEY = config("DJANGO_SECRET_KEY", default="insecure-dev-key")
 
-ALLOWED_HOSTS = ["*"]
+print("💻 Loading development settings")
 
-# Copy base apps and middleware so linter knows they exist
-INSTALLED_APPS = list(BASE_APPS)
-MIDDLEWARE = list(BASE_MIDDLEWARE)
+# Development-specific allowed hosts
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0", "192.168.1.100"]
 
-# Dev database: SQLite fallback
-import dj_database_url
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR}/db.sqlite3",
-        conn_max_age=0,
-    )
-}
-
-# Dev CORS and CSRF
+# Developer-friendly CORS for local development
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:8000", 
+    "http://127.0.0.1:8000",
 ]
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 
-# Relax security
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+# Relax security for development
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
-print("💻 Development settings loaded successfully")
+# Enhanced logging for development
+LOGGING['root']['level'] = 'DEBUG'
+LOGGING['loggers']['django']['level'] = 'INFO'
+
+# Optional: Add debug toolbar if available, but don't break if not
+try:
+    # Try to import and configure debug toolbar
+    import django
+    from django.conf import settings
+    
+    if 'debug_toolbar' not in settings.INSTALLED_APPS:
+        settings.INSTALLED_APPS += ['debug_toolbar']
+        settings.MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + settings.MIDDLEWARE
+        settings.INTERNAL_IPS = ['127.0.0.1', 'localhost']
+        print("🔧 Django Debug Toolbar configured")
+except (ImportError, Exception) as e:
+    print(f"⚠️ Django Debug Toolbar not available: {e}")
+    print("💡 Run: pip install django-debug-toolbar to enable debugging features")
+
+# Database configuration for development
+if 'default' in DATABASES and DATABASES['default'].get('ENGINE', '').endswith('postgresql'):
+    DATABASES['default']['OPTIONS'] = {
+        'options': '-c search_path=public',
+        'connect_timeout': 10,
+    }
+
+print("✅ Development settings configured successfully")

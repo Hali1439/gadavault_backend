@@ -44,3 +44,6 @@ setup_oda.sql
 staticfiles/
 
 TODO.md
+.env.local
+.env.railway
+.env.render
