@@ -3,7 +3,7 @@ builder = "Dockerfile"   # Force Railway to use your Dockerfile, not Nixpacks
 
 [deploy]
 # Run migrations before starting Gunicorn
-[deploy]
 startCommand = "python manage.py migrate && gunicorn gada_vault.wsgi:application --bind 0.0.0.0:$PORT"
+
 # Optionally scale workers
 numReplicas = 1
